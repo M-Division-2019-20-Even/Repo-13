@@ -1,0 +1,73 @@
+#include <Servo.h>
+#include "HX711.h"
+
+HX711 scale;
+int w1 = 28 , w2 = 29;
+
+float cf = 2230;
+float weight;
+
+Servo myservo1 , myservo2;
+int pos1 = 0 , pos2 = 0 , pin1 = 30 , pin2 = 31;
+
+int led = 8 , ir1 = 10 , ir2 = 11 , dc1 = 34 , dc2 = 35;
+
+void setup() 
+{
+  Serial.begin(9600);
+  pinMode(led,OUTPUT);      //pin for LED
+  pinMode(ir1,INPUT);       //pin for IR-1
+  pinMode(ir2,INPUT);       //pin for IR-2
+  pinMode(dc1,OUTPUT);      //pin1 for DC motor
+  pinMode(dc2,OUTPUT);      //pin2 for DC motor
+  myservo1.attach(pin1);    //pin for servo-1
+  myservo2.attach(pin2);    //pin for servo-2
+  scale.begin(w1 , w2);     //pin for weight sensor
+  scale.set_scale(cf);
+  scale.tare();             
+}
+
+void loop() 
+{
+  int ir1_state , ir2_state;
+  
+  ir1_state = digitalRead(ir1);
+  ir2_state = digitalRead(ir2);
+
+  weight = scale.get_units() , 5;
+  if(weight < 0)
+    weight = 0.00;
+  weight = weight / 1000;     //weight to convert in kg
+  
+  if(ir1_state == 1 && ir2_state == 1 && weight < 1)  //if mud and seeds are present and weight is < 1 kg
+  {
+    digitalWrite(led,HIGH);      //Indication that machine is under process              
+    
+    for(pos1 = 0 , pos2 = 0; pos1 <=90 , pos2 <= 90 ; pos1++ , pos2++)
+    {
+      myservo1.write(pos1);
+      myservo2.write(pos2);
+      delay(10);
+      digitalWrite(dc1,HIGH);
+      digitalWrite(dc2,LOW);
+    }
+    
+    for(pos1 = 90 ,pos2 = 90; pos1 >=0 , pos2 >= 0; pos1-- , pos2--)
+    {
+      myservo1.write(pos1);
+      myservo2.write(pos2);
+      delay(10);
+      digitalWrite(dc1,HIGH);
+      digitalWrite(dc2,LOW);
+    }
+
+    digitalWrite(dc1,HIGH);
+    digitalWrite(dc2,LOW);
+  }
+  else
+  {
+    digitalWrite(led,LOW); 
+    digitalWrite(dc1,LOW);
+    digitalWrite(dc2,LOW);
+  }
+}
